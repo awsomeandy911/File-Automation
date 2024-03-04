@@ -7,12 +7,16 @@ from watchdog.events import LoggingEventHandler
 
 # duplicate backslashes so program doesn't run into Unicode error
 sourceDir = "C:\\Users\\bndy1\\Downloads"
+musicDir = "C:\\Users\\bndy1\\Music" 
+imageDir = "C:\\Users\\bndy1\\Pictures"
+videoDir = "C:\\Users\\bndy1\\Videos"
 
 class MoveFileHandler(FileSystemEventHandler):
     def modified(self, event):
         with os.scandir(sourceDir) as entries:
             for entry in entries:
                 name = entry.name
+                destination = sourceDir
                 print(entry.name)
 
 # monitors the current directory recursively for file system changes and logs them to the console
