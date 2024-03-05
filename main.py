@@ -2,8 +2,9 @@ import os
 import sys
 import time
 import logging
+import shutil
 from watchdog.observers import Observer
-from watchdog.events import LoggingEventHandler
+from watchdog.events import FileSystemEventHandler
 
 # duplicate backslashes so program doesn't run into Unicode error
 sourceDir = "C:\\Users\\bndy1\\Downloads"
