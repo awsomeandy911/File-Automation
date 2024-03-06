@@ -1,45 +1,96 @@
-import os
-import sys
-import time
+from os import scandir, rename
+from os.path import splitext, exists, join
+from shutil import move
+from time import sleep
 import logging
-import shutil
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
-# duplicate backslashes so program doesn't run into Unicode error
-sourceDir = "C:\\Users\\bndy1\\Downloads"
-musicDir = "C:\\Users\\bndy1\\Music" 
-imageDir = "C:\\Users\\bndy1\\Pictures"
-videoDir = "C:\\Users\\bndy1\\Videos"
+# fill in below folder to track e.g. Windows: "C:\\Users\\UserName\\Downloads"
+sourceDirectory = ""
+destinationDirSFX = ""
+destinationDirMusic = ""
+destinationDirVideo = ""
+destinationDirImage = ""
+destinationDirDocument = ""
 
-def move(destination, event, name):
-    # needs work
-    fileExists = os.scandir
+# all image types
+imageExtensions = [".jpg", ".jpeg", ".jpe", ".jif", ".jfif", ".jfi", ".png", ".gif", ".webp", ".tiff", ".tif", ".psd", ".raw", ".arw", ".cr2", ".nrw", ".k25", ".bmp", ".dib", ".heif", ".heic", ".ind", ".indd", ".indt", ".jp2", ".j2k", ".jpf", ".jpf", ".jpx", ".jpm", ".mj2", ".svg", ".svgz", ".ai", ".eps", ".ico"]
+# all video types
+videoExtensions = [".webm", ".mpg", ".mp2", ".mpeg", ".mpe", ".mpv", ".ogg", ".mp4", ".mp4v", ".m4v", ".avi", ".wmv", ".mov", ".qt", ".flv", ".swf", ".avchd"]
+# all audio types
+audioExtensions = [".m4a", ".flac", "mp3", ".wav", ".wma", ".aac"]
+# all document types
+documentExtensions = [".doc", ".docx", ".odt", ".pdf", ".xls", ".xlsx", ".ppt", ".pptx"]
 
-# class that handles the moving of files
-class MoveFileHandler(FileSystemEventHandler):
+
+def makeUnique(destination, name):
+    filename, extension = splitext(name)
+    counter = 1
+    # if file exists, function adds 1 to make unique
+    while exists(f"{destination}/{name}"):
+        name = f"{filename}({str(counter)}){extension}"
+        counter += 1
+    return name
+
+
+def moveFile(destination, entry, name):
+    if exists(f"{destination}/{name}"):
+        uniqueName = makeUnique(destination, name)
+        oldName = join(destination, name)
+        newName = join(destination, uniqueName)
+        rename(oldName, newName)
+    move(entry, destination)
+
+
+class MoverFileHandler(FileSystemEventHandler):
     def modified(self, event):
-        with os.scandir(sourceDir) as entries:
+        with scandir(sourceDirectory) as entries:
             for entry in entries:
                 name = entry.name
-                destination = sourceDir
-                if name.endswith('.mp3'):
-                    destination = musicDir
-                    # needs move function
-                elif name.endswith('.mp4') or name.endswith('.mov'):
-                    destination = videoDir
-                    # move function
-                elif name.endswith('.png') or name.endswith('.jpeg') or name.endswith('.jpg'):
-                    destination = imageDir
-                    # move function
-                print(entry.name)
+                self.checkAudio(entry, name)
+                self.checkVideo(entry, name)
+                self.checkImage(entry, name)
+                self.checkDocument(entry, name)
 
-# monitors the current directory recursively for file system changes and logs them to the console
+    # fucntion checks all audio files
+    def checkAudio(self, entry, name):  
+        for audioExtension in audioExtensions:
+            if name.endswith(audioExtension) or name.endswith(audioExtension.upper()):
+                if entry.stat().st_size < 10_000_000 or "SFX" in name:  # ? 10Megabytes
+                    destination = destinationDirSFX
+                else:
+                    destination = destinationDirMusic
+                moveFile(destination, entry, name)
+                logging.info(f"Moved audio file: {name}")
+
+    # fucntion checks all video files
+    def checkVideo(self, entry, name):  
+        for videoExtension in videoExtensions:
+            if name.endswith(videoExtension) or name.endswith(videoExtension.upper()):
+                moveFile(destinationDirVideo, entry, name)
+                logging.info(f"Moved video file: {name}")
+
+    # fucntion checks all image files
+    def checkImage(self, entry, name):  
+        for imageExtension in imageExtensions:
+            if name.endswith(imageExtension) or name.endswith(imageExtension.upper()):
+                moveFile(destinationDirImage, entry, name)
+                logging.info(f"Moved image file: {name}")
+
+    # fucntion checks all document files
+    def checkDocument(self, entry, name):  
+        for documentExtension in documentExtensions:
+            if name.endswith(documentExtension) or name.endswith(documentExtension.upper()):
+                moveFile(destinationDirDocument, entry, name)
+                logging.info(f"Moved document file: {name}")
+
+# monitors the current directory recursively for file system changes and logs them to the console (do not change!)
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s - %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
-    path = sourceDir
+    path = sourceDirectory
     event_handler = MoveFileHandlerr()
     observer = Observer()
     observer.schedule(event_handler, path, recursive=True)
